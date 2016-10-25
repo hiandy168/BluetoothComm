@@ -15,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import geekband.yanjinyi1987.com.bluetoothcomm.R;
@@ -26,8 +27,12 @@ import geekband.yanjinyi1987.com.bluetoothcomm.R;
 public class BluetoothConnection extends DialogFragment implements View.OnClickListener {
 
     private Button mEnableBtButton;
-    private ListView mPariedBtList;
-    private ListView mDiscvoeredList;
+    private ListView mBtPairedListView;
+    private ListView mBtDiscoveredListView;
+    private ArrayList<BTDevice> mBtPairedDevices;
+    private PairedBtAdapter mPairedBtAdapter;
+    private ArrayList<BTDevice> mBtDiscoveredDevices;
+    private PairedBtAdapter mDiscoveredBtAdapter;
 
     @Override
     public void onClick(View v) {
@@ -49,21 +54,29 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         getDialog().setTitle("蓝牙设置");
         View v = inflater.inflate(R.layout.bluetooth_connection_dialog,container,false);
         initViews(v);
-
-
-
-
         return v;
     }
 
     private void initViews(View v) {
         mEnableBtButton = (Button) v.findViewById(R.id.bt_enable_button);
-        mPariedBtList = (ListView) v.findViewById(R.id.bt_paried_list);
-        mDiscvoeredList = (ListView) v.findViewById(R.id.bt_discovered_list);
+        initListViews(v);
     }
 
-    private void initListViews() {
+    private void initListViews(View v) {
+        mBtPairedListView = (ListView) v.findViewById(R.id.bt_paried_list);
+        mBtDiscoveredListView = (ListView) v.findViewById(R.id.bt_discovered_list);
+        mBtPairedDevices = new ArrayList<>();
+        mPairedBtAdapter = new PairedBtAdapter(this.getActivity(),
+                R.layout.bt_device_list,
+                mBtPairedDevices);
 
+        mBtDiscoveredDevices = new ArrayList<>();
+        mDiscoveredBtAdapter = new PairedBtAdapter(this.getActivity(),
+                R.layout.bt_device_list,
+                mBtDiscoveredDevices);
+
+        mBtPairedListView.setAdapter(mPairedBtAdapter);
+        mBtDiscoveredListView.setAdapter(mDiscoveredBtAdapter);
     }
 }
 class BTDevice {
@@ -71,12 +84,12 @@ class BTDevice {
     String deviceName;
     boolean devicePaired;
 }
-class PariedBtAdapter extends ArrayAdapter<BTDevice> {
+class PairedBtAdapter extends ArrayAdapter<BTDevice> {
     int resourceId;
     Context context;
     List<BTDevice> btDevices;
-    public PariedBtAdapter(Context context, int resource, int textViewResourceId, List<BTDevice> objects) {
-        super(context, resource, textViewResourceId, objects);
+    public PairedBtAdapter(Context context, int resource, List<BTDevice> objects) {
+        super(context, resource, objects);
         resourceId = resource;
         this.context = context;
         btDevices = objects;
