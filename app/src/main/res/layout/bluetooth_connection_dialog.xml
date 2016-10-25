@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/bt_config_titile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="蓝牙设置"/>
+
+    <Button
+        android:id="@+id/bt_enable_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="打开蓝牙"/>
+
+    <TextView
+        android:id="@+id/bt_paired_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="已配对设备"/>
+
+    <ListView
+        android:id="@+id/bt_paried_list"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:id="@+id/bt_discovered_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="发现的设备"/>
+
+    <ListView
+        android:id="@+id/bt_discovered_list"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+</RelativeLayout>

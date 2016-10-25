@@ -2,14 +2,18 @@ package geekband.yanjinyi1987.com.bluetoothcomm;
 
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     private BluetoothAdapter mBluetoothAdapter;
     private boolean noBluetooth;
@@ -22,11 +26,28 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+    private Button mBTConnectionButton;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch(requestCode) {
             case REQUEST_ENABLE_BT:
+                if(resultCode==RESULT_OK) {
+                    //蓝牙设备已经被使能了，then do the job，paired or discovery and then connecting，看sample我们
+                    //需要做一个listview来实现这一点。
+                    mBTConnectionButton.setEnabled(false);
+                    //先打开系统自带的蓝牙设置界面来配对和连接蓝牙，有时间再自己写一个DialogFragment的例子
+                    Intent settingsIntent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+                    //但是打开的这个Activity好像只有显示配对和查找配对设备的功能，没有连接的功能哦。
+                    startActivity(settingsIntent);
+                }
+                else if(resultCode == RESULT_CANCELED) {
+                    //蓝牙设备没有被使能
+                }
+                else {
+                    //不可能到这里来
+                    Toast.makeText(this,"Error！",Toast.LENGTH_LONG).show();
+                }
                 break;
             default:
                 break;
@@ -60,8 +81,7 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT); //对应onActivityResult
         }
-        //蓝牙设备已经被使能了，then do the job，paired or discovery and then connecting，看sample我们
-        //需要做一个listview来实现这一点。
+
 
     }
     /*
@@ -71,6 +91,19 @@ public class MainActivity extends AppCompatActivity {
      */
     void initViews()
     {
+        mBTConnectionButton = (Button) findViewById(R.id.connect_bt_device);
+        mBTConnectionButton.setOnClickListener(this);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch(v.getId()) {
+            case R.id.connect_bt_device:
+                initBluetooth();
+                break;
+            default:
+                break;
+        }
 
     }
 }
