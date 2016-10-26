@@ -13,6 +13,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import geekband.yanjinyi1987.com.bluetoothcomm.fragment.BluetoothConnection;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     private BluetoothAdapter mBluetoothAdapter;
@@ -35,11 +37,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if(resultCode==RESULT_OK) {
                     //蓝牙设备已经被使能了，then do the job，paired or discovery and then connecting，看sample我们
                     //需要做一个listview来实现这一点。
+                    /*
                     mBTConnectionButton.setEnabled(false);
                     //先打开系统自带的蓝牙设置界面来配对和连接蓝牙，有时间再自己写一个DialogFragment的例子
                     Intent settingsIntent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
                     //但是打开的这个Activity好像只有显示配对和查找配对设备的功能，没有连接的功能哦。
                     startActivity(settingsIntent);
+                    */
+                    callBtConnectionDialog();
                 }
                 else if(resultCode == RESULT_CANCELED) {
                     //蓝牙设备没有被使能
@@ -52,6 +57,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             default:
                 break;
         }
+    }
+
+    void callBtConnectionDialog() {
+        BluetoothConnection btDialog = BluetoothConnection.newInstance();
+        btDialog.show(getFragmentManager(), "蓝牙设置");
     }
 
     @Override
@@ -81,8 +91,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT); //对应onActivityResult
         }
-
-
+        else {
+            callBtConnectionDialog();
+        }
     }
     /*
     关于白天黑夜 ，春夏秋冬什么的，好像是可以通过手机上的时间或者网络获取的
