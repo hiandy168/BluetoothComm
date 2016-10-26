@@ -122,13 +122,13 @@ class PairedBtAdapter extends ArrayAdapter<BTDevice> {
             parentViewHolder = (ParentViewHolder) view.getTag();
         }
         if(btDevice.devicePaired==true) {
-            parentViewHolder.infoImage.setImageResource(R.drawable.btInfo);
+            parentViewHolder.infoImage.setImageResource(R.drawable.bt_info);
             parentViewHolder.infoImage.setVisibility(View.VISIBLE);
         }
         else {
             parentViewHolder.infoImage.setVisibility(View.INVISIBLE);
         }
-        parentViewHolder.typeImage.setImageResource(R.drawable.btTypeImage);
+        parentViewHolder.typeImage.setImageResource(R.drawable.bt_type_image);
         parentViewHolder.name.setText(btDevice.deviceName);
         return super.getView(position, convertView, parent);
     }
