@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean bluetoothDisable;
     private static final int REQUEST_ENABLE_BT=1;
 
+    //处理蓝牙接收器的状态变化
     BroadcastReceiver mBroadcstReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -44,7 +45,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //但是打开的这个Activity好像只有显示配对和查找配对设备的功能，没有连接的功能哦。
                     startActivity(settingsIntent);
                     */
-                    callBtConnectionDialog();
+                    if(noBluetooth==false) {
+                        callBtConnectionDialog();
+                    }
+                    else {
+                        try {
+                            throw(new Exception("程序不可能运行到这里"));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 else if(resultCode == RESULT_CANCELED) {
                     //蓝牙设备没有被使能
@@ -60,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     void callBtConnectionDialog() {
-        BluetoothConnection btDialog = BluetoothConnection.newInstance();
+        BluetoothConnection btDialog = BluetoothConnection.newInstance(mBluetoothAdapter);
         btDialog.show(getFragmentManager(), "蓝牙设置");
     }
 

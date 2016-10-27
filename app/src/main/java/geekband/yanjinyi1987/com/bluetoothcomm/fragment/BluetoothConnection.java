@@ -1,16 +1,20 @@
 package geekband.yanjinyi1987.com.bluetoothcomm.fragment;
 
 import android.app.DialogFragment;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,10 +27,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.RunnableFuture;
+import java.util.UUID;
 
 import geekband.yanjinyi1987.com.bluetoothcomm.R;
 
@@ -44,7 +49,37 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
     private PairedBtAdapter mPairedBtAdapter;
     private ArrayList<BTDevice> mBtDiscoveredDevices;
     private PairedBtAdapter mDiscoveredBtAdapter;
-    private BluetoothAdapter mBluetoothAdapter;
+    private static BluetoothAdapter mBluetoothAdapter;
+    public final static String NAME = "JGCX";
+    public final static UUID MY_UUID = UUID.randomUUID();
+
+    Handler mBluetoothConnectionHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch(msg.what) {
+                case 1:
+                    //连接不成功，跳不出绑定的界面，即弹出要求输入的密码框啥的
+                    Toast.makeText(getActivity(),"已连接到设备",Toast.LENGTH_LONG).show();
+                    //关闭ProgressDialog
+                    mProgressDialog.dismiss();
+                    //获取Socket并传递给MainActivity
+                    //关闭自己
+                    dismiss();
+                    break;
+                case 0:
+                    Toast.makeText(getActivity(),"连接到设备失败",Toast.LENGTH_LONG).show();
+                    //关闭ProgressDialog
+                    mProgressDialog.dismiss();
+                    //重新开启startRecovery
+                    mDiscoveredBtAdapter.clear();
+                    discoverBtDevices();
+                    mRefreshBtButton.setEnabled(false);
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
     BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -55,7 +90,7 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
                 //Get the BluetoothDevice object from the Intent
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 //Add the name and address to an array adapter to show in a ListView
-                mDiscoveredBtAdapter.add(new BTDevice(device.getType(),device.getName(),false));
+                mDiscoveredBtAdapter.add(new BTDevice(device,device.getType(),device.getName(),null,false));
             }
         }
     };
@@ -71,8 +106,11 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
 
     Handler animatorHandle =  new Handler();
     Handler timeoutHandle = new Handler();
+    private BluetoothSocket mBluetoothSocket;
+    private ProgressDialog mProgressDialog;
 
-    public static BluetoothConnection newInstance() {
+    public static BluetoothConnection newInstance(BluetoothAdapter bluetoothAdapter) {
+        mBluetoothAdapter = bluetoothAdapter;
         return new BluetoothConnection();
     }
 
@@ -89,7 +127,7 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         int theme = android.R.style.Theme_DeviceDefault_Light_Dialog;
         setStyle(style,theme);
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        this.getActivity().registerReceiver(mReceiver,filter); //这里需要进行改动，Fragment不能接收信号么？
+        this.getActivity().registerReceiver(mReceiver,filter); //这里不需要进行改动，Fragment不能接收信号，但这只是注册一下
     }
 
     @Nullable
@@ -133,6 +171,8 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         initListViews(v);
     }
 
+
+
     private void initListViews(View v) {
         mBtPairedListView = (ListView) v.findViewById(R.id.bt_paried_list);
         mBtDiscoveredListView = (ListView) v.findViewById(R.id.bt_discovered_list);
@@ -152,14 +192,24 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         mBtPairedListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
+                //connectBtClient(((BTDevice)mBtDiscoveredListView.getItemAtPosition(position)).mBtDevice);
+                BluetoothDevice mmBtDevice = mPairedBtAdapter.getItem(position).mBtDevice;
+                ConnectThread btConnectThread = new ConnectThread(mmBtDevice,mBluetoothConnectionHandler);
+                btConnectThread.start(); //线程开始运行
+                //展示ProgressDialog
+                openProgressDialog(mmBtDevice.getName());
             }
         });
 
         mBtDiscoveredListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
+                //connectBtClient(((BTDevice)mBtDiscoveredListView.getItemAtPosition(position)).mBtDevice);
+                BluetoothDevice mmBtDevice = mDiscoveredBtAdapter.getItem(position).mBtDevice;
+                ConnectThread btConnectThread = new ConnectThread(mmBtDevice,mBluetoothConnectionHandler);
+                btConnectThread.start(); //线程开始运行
+                //展示ProgressDialog
+                openProgressDialog(mmBtDevice.getName());
             }
         });
 
@@ -167,15 +217,26 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         discoverBtDevices(); //异步程序
     }
 
+    //当连接完成之后就关闭这个ProgressDialog与DialogFragment
+    void openProgressDialog(String bt_device_name) {
+        Log.i("BluetoothConnection","ProgressDialog打开了");
+        mProgressDialog = new ProgressDialog(this.getActivity());
+        mProgressDialog.setTitle("连接到设备"+bt_device_name+"中....");
+        mProgressDialog.setMessage("请稍后！");
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        mProgressDialog.setCancelable(false); //保持在最前
+        mProgressDialog.show();
+    }
+
     void queryPairedBtDevices(PairedBtAdapter tempPairedBtAdapter) {
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        //mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter(); //这里应该使用MainActivity传递进来的数据
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
         // If there are paired devices
         if (pairedDevices.size() > 0) {
             // Loop through paired devices
             for (BluetoothDevice device : pairedDevices) {
                 // Add the name and address to an array adapter to show in a ListView
-                tempPairedBtAdapter.add(new BTDevice(device.getType(),device.getName(),false));
+                tempPairedBtAdapter.add(new BTDevice(device,device.getType(),device.getName(),null,false));
             }
         }
     }
@@ -228,22 +289,109 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         }
     }
 
+    //这个函数必须是阻塞的，因为连不上对应的设备，这个APP并没有鸟用。
+    //点击之后，出现一个进度条并且其余设备不能被继续点击。如果连接设备成功，那么应该自动的退出这个dialog并展示Toast
+    //将获得的mBluetoothSocket传递到MainActivity来进行后续I/O操作，因为控制逻辑都在那里。
+    private boolean connectBtClient(BluetoothDevice mRemoteBtDevice) { //我们需要手动链接到对应的bluetooth device上所以应该使用connecting as a client
+
+        try {
+            mBluetoothSocket = mRemoteBtDevice.createRfcommSocketToServiceRecord(MY_UUID);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        mBluetoothAdapter.cancelDiscovery(); //这个时候必然是已经找到了对应的设备才会调用这个函数的
+
+        try {
+            mBluetoothSocket.connect();
+        } catch (IOException e) {
+            //连接不上这个设备，那么关闭socket并退出函数
+            try {
+                mBluetoothSocket.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            return false;
+        }
+
+        //设备已经链接上了，那么可以开始传递数据了，但这是在主界面中实现的功能，所以这里这个函数必须向MainActivity传递一个什么东东。
+        return true;
+    }
+
+
+    private class ConnectThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final BluetoothDevice mmDevice;
+        private Handler mBluetoothConnectionHandler;
+        public ConnectThread(BluetoothDevice device,Handler mBluetoothConnectionHandler) {
+            // Use a temporary object that is later assigned to mmSocket,
+            // because mmSocket is final
+            BluetoothSocket tmp = null;
+            mmDevice = device;
+            this.mBluetoothConnectionHandler = mBluetoothConnectionHandler;
+
+            // Get a BluetoothSocket to connect with the given BluetoothDevice
+            try {
+                // MY_UUID is the app's UUID string, also used by the server code
+                tmp = device.createRfcommSocketToServiceRecord(BluetoothConnection.MY_UUID);
+            } catch (IOException e) { }
+            mmSocket = tmp;
+        }
+
+        public void run() {
+            // Cancel discovery because it will slow down the connection
+            mBluetoothAdapter.cancelDiscovery();
+
+            try {
+                // Connect the device through the socket. This will block
+                // until it succeeds or throws an exception
+                mmSocket.connect();
+            } catch (IOException connectException) {
+                // Unable to connect; close the socket and get out
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) { }
+                mBluetoothConnectionHandler.sendEmptyMessage(0); //连接失败
+                return;
+            }
+
+            //将mmSocket传递给MainActivity
+            //manageConnectedSocket(mmSocket);
+            mBluetoothConnectionHandler.sendEmptyMessage(1); //连接成功
+
+        }
+
+        /** Will cancel an in-progress connection, and close the socket */
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) { }
+        }
+    }
 }
+
+
 
 class BTDevice {
     int deviceType;
     String deviceName;
+    UUID uuid;
     boolean devicePaired;
+    BluetoothDevice mBtDevice;
 
-    BTDevice(int deviceType,String deviceName) {
+    BTDevice(BluetoothDevice btDevice,int deviceType,String deviceName,UUID uuid) {
+        mBtDevice = btDevice;
         this.deviceType=deviceType;
         this.deviceName=deviceName;
+        this.uuid=uuid;
         devicePaired=true;
     }
 
-    BTDevice(int deviceType,String deviceName,boolean devicePaired) {
+    BTDevice(BluetoothDevice btDevice,int deviceType,String deviceName,UUID uuid,boolean devicePaired) {
+        mBtDevice = btDevice;
         this.deviceType=deviceType;
         this.deviceName=deviceName;
+        this.uuid=uuid;
         this.devicePaired=false;
     }
 }
