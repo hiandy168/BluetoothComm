@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Parcel;
 import android.os.ParcelUuid;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -58,10 +59,12 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
     Handler mBluetoothConnectionHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            //BluetoothDevice有Parcelable接口额
+            BluetoothDevice mBluetoothDevice = (BluetoothDevice) msg.obj;
             switch(msg.what) {
                 case 1:
                     //连接成功
-                    Toast.makeText(getActivity(),"已连接到设备",Toast.LENGTH_LONG).show();
+                    Toast.makeText(getActivity(),"已连接到蓝牙设备"+mBluetoothDevice.getName(),Toast.LENGTH_LONG).show();
                     //关闭ProgressDialog
                     if(mProgressDialog!=null) {
                         mProgressDialog.dismiss();
@@ -71,7 +74,7 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
                     dismiss();
                     break;
                 case 0:
-                    Toast.makeText(getActivity(),"连接到设备失败",Toast.LENGTH_LONG).show();
+                    Toast.makeText(getActivity(),"连接到蓝牙设备"+mBluetoothDevice.getName()+"失败",Toast.LENGTH_LONG).show();
                     //关闭ProgressDialog
                     if(mProgressDialog!=null) {
                         mProgressDialog.dismiss();
@@ -261,7 +264,7 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
     //设置搜寻动画，当搜索超时后，停止搜索，并使能refresh button
     void discoverBtDevices() {
         if(!mBluetoothAdapter.startDiscovery()) {
-            Toast.makeText(this.getActivity(),"发现设备失败",Toast.LENGTH_LONG).show();
+            Toast.makeText(this.getActivity(),"启动设备发现失败",Toast.LENGTH_LONG).show();
         }
         else {
             discovered =true;
@@ -340,7 +343,7 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
         public void run() {
             // Cancel discovery because it will slow down the connection
             mBluetoothAdapter.cancelDiscovery();
-
+            Message msg = new Message();
             try {
                 // Connect the device through the socket. This will block
                 // until it succeeds or throws an exception
@@ -350,13 +353,19 @@ public class BluetoothConnection extends DialogFragment implements View.OnClickL
                 try {
                     mmSocket.close();
                 } catch (IOException closeException) { }
-                mBluetoothConnectionHandler.sendEmptyMessage(0); //连接失败
+                //mBluetoothConnectionHandler.sendEmptyMessage(0); //连接失败
+                msg.what=0; //连接失败
+                msg.obj = mmDevice;
+                mBluetoothConnectionHandler.sendMessage(msg);
                 return;
             }
 
             //将mmSocket传递给MainActivity
             //manageConnectedSocket(mmSocket);
-            mBluetoothConnectionHandler.sendEmptyMessage(1); //连接成功
+            //mBluetoothConnectionHandler.sendEmptyMessage(1); //连接成功
+            msg.what=1; //连接成功
+            msg.obj = mmDevice;
+            mBluetoothConnectionHandler.sendMessage(msg);
             mConnectedDeviceMACs.add(mmDevice.getAddress());
 
         }
