@@ -47,9 +47,10 @@
         android:layout_height="200dp"
         android:layout_below="@+id/send_AT_command"
         android:maxLines="100"
-        android:inputType="text"
+        android:inputType="textMultiLine"
         android:gravity="top"
         android:background="@drawable/bg_edittext"
-        android:layout_marginTop="5dp"/>
+        android:layout_marginTop="5dp"
+        />
     <!--for debug-->
 </RelativeLayout>
