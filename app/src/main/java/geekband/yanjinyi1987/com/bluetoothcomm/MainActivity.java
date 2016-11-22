@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mSSPRWThread.start();
                     //将功能区使能
                     rwReady=true;
+                    enableViews();
                     break;
                 default:
                     break;
@@ -223,6 +224,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mBTConnectionButton.setOnClickListener(this);
         mSendAtCommandButton.setOnClickListener(this);
+
+        disableViews();
+    }
+
+    void enableViews() {
+        mSendAtCommandButton.setEnabled(true);
+        mAtCommandText.setEnabled(true);
+        mReceivedSPPDataText.setEnabled(true);
+    }
+
+    void disableViews() {
+        mSendAtCommandButton.setEnabled(false);
+        mAtCommandText.setEnabled(false);
+        mReceivedSPPDataText.setEnabled(false);
     }
     //接受传回的结果肯定是异步的哦！
     @Override
@@ -235,7 +250,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String at_command = mAtCommandText.getText().toString();
                 if(at_command!=null && at_command.length()>0) {
                     //发送命令
-                    mSSPRWThread.write(at_command.getBytes());
+                    if(rwReady==true) {
+                        mSSPRWThread.write(at_command.getBytes());
+                    }
+                    else {
+                        Toast.makeText(this,"没有蓝牙连接",Toast.LENGTH_LONG).show();
+                    }
                 }
                 break;
             default:
